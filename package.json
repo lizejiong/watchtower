@@ -1,0 +1,22 @@
+{
+  "private": true,
+  "name": "watchtower",
+  "packageManager": "pnpm@10.27.0",
+  "scripts": {
+    "lint": "pnpm -r lint",
+    "build": "pnpm -r build",
+    "test": "pnpm -r --if-present test",
+    "smoke": "tsx scripts/smoke/full-flow.ts",
+    "dev:dashboard": "pnpm --filter @watchtower/dashboard dev",
+    "dev:api": "pnpm --filter @watchtower/api dev",
+    "dev:worker": "pnpm --filter @watchtower/worker dev"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
+    "tsx": "^4.20.3",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
+  }
+}
