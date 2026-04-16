@@ -1,2 +1,5 @@
+export * from './analysis/prompt.js'
+export * from './analysis/schema.js'
+export * from './analysis/types.js'
 export * from './issue-sync.js'
 export * from './state-machine.js'
