@@ -8,6 +8,9 @@ const sentryWebhookSchema = z.object({
     issue: z.object({
       id: z.string(),
       title: z.string().optional(),
+      culprit: z.string().optional(),
+      level: z.string().optional(),
+      projectSlug: z.string().optional(),
     }),
   }),
 })
