@@ -8,6 +8,7 @@ export function IssueDetail(input: {
   issue: IssueView
 }) {
   const { issue } = input
+  const latestAnalysis = issue.latestAnalysis
 
   return (
     <div className="detail-grid">
@@ -17,7 +18,7 @@ export function IssueDetail(input: {
             <span className={getStatusClassName(issue.status)}>{issue.status}</span>
             <h1 className="detail-title">{issue.title}</h1>
             <p className="brand-copy">
-              这是 Watchtower 当前保存的 issue 视图。分析结果、验证记录和 PR 链接会继续追加在这个详情页。
+              Watchtower keeps the raw Sentry issue here and appends the latest repair run, verification output, and draft PR link.
             </p>
           </div>
 
@@ -35,6 +36,73 @@ export function IssueDetail(input: {
               <strong>{issue.externalIssueId}</strong>
             </div>
           </div>
+
+          {latestAnalysis ? (
+            <section className="stack">
+              <div className="section-head">
+                <h2 className="section-title">Latest Analysis</h2>
+                <span className="section-meta">{latestAnalysis.status}</span>
+              </div>
+
+              <div className="kv-list">
+                <div className="kv-item">
+                  <span className="kv-label">Summary</span>
+                  <strong>{latestAnalysis.summary ?? 'No summary recorded'}</strong>
+                </div>
+                <div className="kv-item">
+                  <span className="kv-label">Root Cause</span>
+                  <strong>{latestAnalysis.rootCause ?? 'No root cause recorded'}</strong>
+                </div>
+                <div className="kv-item">
+                  <span className="kv-label">Patch Branch</span>
+                  <strong>{latestAnalysis.patchBranch ?? 'No patch branch recorded'}</strong>
+                </div>
+                <div className="kv-item">
+                  <span className="kv-label">Confidence</span>
+                  <strong>{latestAnalysis.confidence ?? 'unknown'}</strong>
+                </div>
+                <div className="kv-item">
+                  <span className="kv-label">Draft PR</span>
+                  {latestAnalysis.prUrl ? (
+                    <a className="link-accent" href={latestAnalysis.prUrl} target="_blank" rel="noreferrer">
+                      Open draft PR
+                    </a>
+                  ) : (
+                    <strong>Not opened</strong>
+                  )}
+                </div>
+              </div>
+
+              <div className="section-head">
+                <h2 className="section-title">Verification</h2>
+                <span className="section-meta">{latestAnalysis.verification?.length ?? 0} commands</span>
+              </div>
+
+              <div className="verification-list">
+                {latestAnalysis.verification?.length ? (
+                  latestAnalysis.verification.map(record => (
+                    <article key={`${record.command}:${record.exitCode}`} className="verification-card">
+                      <div className="verification-head">
+                        <strong>{record.command}</strong>
+                        <span className={record.exitCode === 0 ? 'verification-pass' : 'verification-fail'}>
+                          exit {record.exitCode}
+                        </span>
+                      </div>
+                      {record.stderr ? <pre className="verification-log">{record.stderr}</pre> : null}
+                    </article>
+                  ))
+                ) : (
+                  <p className="form-note">No verification records were stored for this run.</p>
+                )}
+              </div>
+            </section>
+          ) : (
+            <section className="panel">
+              <div className="panel-inner">
+                <p className="form-note">No analysis run has been recorded for this issue yet.</p>
+              </div>
+            </section>
+          )}
         </div>
       </section>
 
@@ -45,7 +113,7 @@ export function IssueDetail(input: {
               <h2 className="section-title">Repair Track</h2>
             </div>
             <p className="form-note">
-              V1 目前已经具备自动判断、AI 分析、补丁生成、验证闸门和 draft PR 打开能力。
+              V1 now covers automatic qualification, AI analysis, patch generation, verification gates, and draft PR creation.
             </p>
           </div>
         </section>
@@ -53,10 +121,10 @@ export function IssueDetail(input: {
         <section className="panel">
           <div className="panel-inner">
             <div className="section-head">
-              <h2 className="section-title">Current Gaps</h2>
+              <h2 className="section-title">Current Focus</h2>
             </div>
             <p className="form-note">
-              这个页签下一步会接入 analysis summary、verification records、draft PR URL 和 auto_skipped 原因。
+              The next hardening layer is retry policy, branch replacement rules, and clearer skip reasons for issues that never enter repair.
             </p>
           </div>
         </section>

@@ -6,6 +6,7 @@ import { analyzeIssueJob } from './jobs/analyze-issue.js'
 import { openPrJob } from './jobs/open-pr.js'
 import { verifyFixJob } from './jobs/verify-fix.js'
 import { applyPatch, commitAndPushBranch, createPatchWorktree, discardLocalChanges, openDraftPullRequest } from '@watchtower/integrations'
+import type { AnalysisRunStatus, VerificationRecord } from '@watchtower/contracts'
 
 interface IssueLookupStore {
   findById(issueId: string): IssueRecord | Promise<IssueRecord | undefined> | undefined
@@ -14,6 +15,19 @@ interface IssueLookupStore {
 
 interface RepositoryLookupStore {
   findById(repositoryId: string): RepositoryRecord | Promise<RepositoryRecord | undefined> | undefined
+}
+
+interface AnalysisRunStore {
+  create(input: { issueId: string; status: AnalysisRunStatus }): { id: string } | Promise<{ id: string }>
+  update(id: string, input: {
+    status: AnalysisRunStatus
+    summary?: string
+    rootCause?: string
+    patchBranch?: string
+    prUrl?: string
+    confidence?: number
+    verification?: VerificationRecord[]
+  }): unknown | Promise<unknown>
 }
 
 async function loadCodeContextFromIssue(repository: RepositoryRecord, issue: IssueRecord): Promise<PatchCodeContextFile[]> {
@@ -40,6 +54,7 @@ export async function processIssueAnalysis(input: {
   issueId: string
 }, deps: {
   issueStore: IssueLookupStore
+  analysisRunStore?: AnalysisRunStore
   repositoryStore: RepositoryLookupStore
   loadCodeContext?: (repository: RepositoryRecord, issue: IssueRecord) => Promise<PatchCodeContextFile[]>
   analyzeIssue?: typeof analyzeIssueJob
@@ -63,6 +78,12 @@ export async function processIssueAnalysis(input: {
   }
 
   await deps.issueStore.updateStatus(issue.id, nextIssueState(issue.status, 'analysis_started'))
+  const analysisRun = deps.analysisRunStore
+    ? await deps.analysisRunStore.create({
+        issueId: issue.id,
+        status: 'running',
+      })
+    : undefined
 
   const codeContext = await (deps.loadCodeContext ?? loadCodeContextFromIssue)(repository, issue)
   const analysisResult = await (deps.analyzeIssue ?? analyzeIssueJob)({
@@ -90,6 +111,18 @@ export async function processIssueAnalysis(input: {
   await deps.issueStore.updateStatus(issue.id, analysisResult.status)
 
   if (!analysisResult.patch) {
+    if (analysisRun && deps.analysisRunStore) {
+      await deps.analysisRunStore.update(analysisRun.id, {
+        status: 'completed',
+        summary: analysisResult.analysis.summary,
+        rootCause: analysisResult.analysis.rootCause,
+        patchBranch: undefined,
+        prUrl: undefined,
+        confidence: analysisResult.analysis.confidence,
+        verification: undefined,
+      })
+    }
+
     return {
       issueId: issue.id,
       status: analysisResult.status,
@@ -115,6 +148,17 @@ export async function processIssueAnalysis(input: {
 
     if (!verification.ok) {
       await (deps.discardLocalChanges ?? discardLocalChanges)(workspace.worktreePath)
+      if (analysisRun && deps.analysisRunStore) {
+        await deps.analysisRunStore.update(analysisRun.id, {
+          status: 'failed',
+          summary: analysisResult.analysis.summary,
+          rootCause: analysisResult.analysis.rootCause,
+          patchBranch: analysisResult.patch.branchName,
+          prUrl: undefined,
+          confidence: analysisResult.analysis.confidence,
+          verification: verification.records,
+        })
+      }
 
       const failedResult = await openPrJob({
         issue: {
@@ -159,6 +203,17 @@ export async function processIssueAnalysis(input: {
     })
 
     await deps.issueStore.updateStatus(issue.id, prResult.status)
+    if (analysisRun && deps.analysisRunStore) {
+      await deps.analysisRunStore.update(analysisRun.id, {
+        status: 'completed',
+        summary: analysisResult.analysis.summary,
+        rootCause: analysisResult.analysis.rootCause,
+        patchBranch: analysisResult.patch.branchName,
+        prUrl: prResult.prUrl,
+        confidence: analysisResult.analysis.confidence,
+        verification: verification.records,
+      })
+    }
 
     return {
       ...prResult,

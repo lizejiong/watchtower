@@ -1,5 +1,5 @@
 import { Prisma } from '@prisma/client'
-import type { RepositoryCreateInput } from '@watchtower/contracts'
+import type { AnalysisRunStatus, RepositoryCreateInput, VerificationRecord } from '@watchtower/contracts'
 import type { IssueRecord, IssueStore, RepositoryRecord, RepositoryStore } from '@watchtower/core'
 import { getDbClient } from './client.js'
 
@@ -64,6 +64,53 @@ function mapIssue(record: {
     culprit: record.culprit ?? undefined,
     level: record.level ?? undefined,
     status: record.status as IssueRecord['status'],
+  }
+}
+
+export interface AnalysisRunRecord {
+  id: string
+  issueId: string
+  status: AnalysisRunStatus
+  summary?: string
+  rootCause?: string
+  patchBranch?: string
+  prUrl?: string
+  confidence?: number
+  verification?: VerificationRecord[]
+  createdAt: Date
+}
+
+function parseVerification(value: Prisma.JsonValue | null) {
+  if (!Array.isArray(value)) {
+    return undefined
+  }
+
+  return value as VerificationRecord[]
+}
+
+function mapAnalysisRun(record: {
+  id: string
+  issueId: string
+  status: string
+  summary: string | null
+  rootCause: string | null
+  patchBranch: string | null
+  prUrl: string | null
+  confidence: number | null
+  verification: Prisma.JsonValue | null
+  createdAt: Date
+}): AnalysisRunRecord {
+  return {
+    id: record.id,
+    issueId: record.issueId,
+    status: record.status as AnalysisRunStatus,
+    summary: record.summary ?? undefined,
+    rootCause: record.rootCause ?? undefined,
+    patchBranch: record.patchBranch ?? undefined,
+    prUrl: record.prUrl ?? undefined,
+    confidence: record.confidence ?? undefined,
+    verification: parseVerification(record.verification),
+    createdAt: record.createdAt,
   }
 }
 
@@ -198,6 +245,86 @@ export function createPrismaIssueStore(client = getDbClient()): IssueStore & {
       })
 
       return Boolean(record)
+    },
+  }
+}
+
+export function createPrismaAnalysisRunStore(client = getDbClient()) {
+  return {
+    async create(input: {
+      issueId: string
+      status: AnalysisRunStatus
+    }) {
+      const record = await client.analysisRun.create({
+        data: {
+          issueId: input.issueId,
+          status: input.status,
+        },
+      })
+
+      return mapAnalysisRun(record)
+    },
+    async update(id: string, input: {
+      status: AnalysisRunStatus
+      summary?: string
+      rootCause?: string
+      patchBranch?: string
+      prUrl?: string
+      confidence?: number
+      verification?: VerificationRecord[]
+    }) {
+      const record = await client.analysisRun.update({
+        where: {
+          id,
+        },
+        data: {
+          status: input.status,
+          summary: input.summary,
+          rootCause: input.rootCause,
+          patchBranch: input.patchBranch,
+          prUrl: input.prUrl,
+          confidence: input.confidence,
+          verification: input.verification ? (input.verification as Prisma.InputJsonValue) : Prisma.JsonNull,
+        },
+      })
+
+      return mapAnalysisRun(record)
+    },
+    async updateByIssueId(issueId: string, input: {
+      status: AnalysisRunStatus
+      summary?: string
+      rootCause?: string
+      patchBranch?: string
+      prUrl?: string
+      confidence?: number
+      verification?: VerificationRecord[]
+    }) {
+      const latest = await client.analysisRun.findFirst({
+        where: {
+          issueId,
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      })
+
+      if (!latest) {
+        throw new Error(`AnalysisRun not found for issue: ${issueId}`)
+      }
+
+      return this.update(latest.id, input)
+    },
+    async findLatestByIssueId(issueId: string) {
+      const record = await client.analysisRun.findFirst({
+        where: {
+          issueId,
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      })
+
+      return record ? mapAnalysisRun(record) : undefined
     },
   }
 }

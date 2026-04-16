@@ -14,6 +14,22 @@ export interface IssueView {
     | 'verification_failed'
     | 'pr_opened'
     | 'ignored'
+  latestAnalysis?: {
+    id: string
+    status: 'queued' | 'running' | 'completed' | 'failed'
+    summary?: string
+    rootCause?: string
+    patchBranch?: string
+    prUrl?: string
+    confidence?: number
+    verification?: Array<{
+      command: string
+      exitCode: number
+      stdout: string
+      stderr: string
+    }>
+    createdAt: string
+  }
 }
 
 export interface RepositoryView {
@@ -55,8 +71,7 @@ export async function getIssues() {
 }
 
 export async function getIssue(issueId: string) {
-  const issues = await getIssues()
-  return issues.find(issue => issue.id === issueId) ?? null
+  return safeFetch<IssueView | null>(`/issues/${issueId}`, null)
 }
 
 export async function getRepositories() {

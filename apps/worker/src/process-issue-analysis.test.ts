@@ -37,6 +37,10 @@ describe('processIssueAnalysis', () => {
     const issue = createIssue()
     const repository = createRepository()
     const updatedStatuses: string[] = []
+    const analysisRunStore = {
+      create: vi.fn(async () => ({ id: 'analysis-1' })),
+      update: vi.fn(async () => ({ id: 'analysis-1' })),
+    }
     const cleanupPatchWorkspace = vi.fn(async () => undefined)
     const createPatchWorkspace = vi.fn(async () => ({
       branchName: 'watchtower/issue-123',
@@ -62,6 +66,7 @@ describe('processIssueAnalysis', () => {
             return { ...issue, status }
           },
         },
+        analysisRunStore,
         repositoryStore: {
           findById: async () => repository,
         },
@@ -124,6 +129,22 @@ describe('processIssueAnalysis', () => {
       commitMessage: 'fix: guard missing thread_id',
     })
     expect(openDraftPr).toHaveBeenCalledTimes(1)
+    expect(analysisRunStore.create).toHaveBeenCalledWith({
+      issueId: issue.id,
+      status: 'running',
+    })
+    expect(analysisRunStore.update).toHaveBeenCalledWith('analysis-1', {
+      status: 'completed',
+      summary: 'Guard missing thread_id before stream setup.',
+      rootCause: 'thread_id is used without validation.',
+      patchBranch: 'watchtower/issue-123',
+      prUrl: 'https://github.com/lzj2000/ai-code/pull/7',
+      confidence: 0.9,
+      verification: [
+        { command: 'pnpm lint', exitCode: 0, stdout: '', stderr: '' },
+        { command: 'pnpm build', exitCode: 0, stdout: '', stderr: '' },
+      ],
+    })
     expect(cleanupPatchWorkspace).toHaveBeenCalledTimes(1)
     expect(result.status).toBe('pr_opened')
   })
@@ -131,6 +152,10 @@ describe('processIssueAnalysis', () => {
   it('discards local patch changes when verification fails', async () => {
     const issue = createIssue()
     const repository = createRepository()
+    const analysisRunStore = {
+      create: vi.fn(async () => ({ id: 'analysis-2' })),
+      update: vi.fn(async () => ({ id: 'analysis-2' })),
+    }
     const cleanupPatchWorkspace = vi.fn(async () => undefined)
     const createPatchWorkspace = vi.fn(async () => ({
       branchName: 'watchtower/issue-123',
@@ -153,6 +178,7 @@ describe('processIssueAnalysis', () => {
           findById: async () => issue,
           updateStatus: async (_issueId, status) => ({ ...issue, status }),
         },
+        analysisRunStore,
         repositoryStore: {
           findById: async () => repository,
         },
@@ -198,6 +224,21 @@ describe('processIssueAnalysis', () => {
     expect(discardLocalChanges).toHaveBeenCalledWith('C:\\temp\\watchtower-worktree-123')
     expect(commitAndPushBranch).not.toHaveBeenCalled()
     expect(openDraftPr).not.toHaveBeenCalled()
+    expect(analysisRunStore.create).toHaveBeenCalledWith({
+      issueId: issue.id,
+      status: 'running',
+    })
+    expect(analysisRunStore.update).toHaveBeenCalledWith('analysis-2', {
+      status: 'failed',
+      summary: 'Guard missing thread_id before stream setup.',
+      rootCause: 'thread_id is used without validation.',
+      patchBranch: 'watchtower/issue-123',
+      prUrl: undefined,
+      confidence: 0.9,
+      verification: [
+        { command: 'pnpm lint', exitCode: 1, stdout: '', stderr: 'lint failed' },
+      ],
+    })
     expect(cleanupPatchWorkspace).toHaveBeenCalledTimes(1)
     expect(result.status).toBe('verification_failed')
   })

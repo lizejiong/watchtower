@@ -1,5 +1,5 @@
 import { Worker } from 'bullmq'
-import { createPrismaIssueStore, createPrismaRepositoryStore } from '@watchtower/db'
+import { createPrismaAnalysisRunStore, createPrismaIssueStore, createPrismaRepositoryStore } from '@watchtower/db'
 import { createSentryClient } from '@watchtower/integrations'
 import { processIssueAnalysis } from './process-issue-analysis.js'
 import { createQueues, createRedisConnection, queueNames } from './queues.js'
@@ -8,6 +8,7 @@ import { pollSentryIssues } from './poller.js'
 export function startWorker() {
   const repositoryStore = createPrismaRepositoryStore()
   const issueStore = createPrismaIssueStore()
+  const analysisRunStore = createPrismaAnalysisRunStore()
   const queues = createQueues()
   const connection = createRedisConnection()
   const sentryClient = createSentryClient()
@@ -21,6 +22,7 @@ export function startWorker() {
         },
         {
           issueStore,
+          analysisRunStore,
           repositoryStore,
         },
       )

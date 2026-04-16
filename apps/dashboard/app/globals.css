@@ -400,6 +400,48 @@ a {
   color: var(--danger);
 }
 
+.link-accent {
+  color: var(--accent-strong);
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+.verification-list {
+  display: grid;
+  gap: 12px;
+}
+
+.verification-card {
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(255, 251, 245, 0.8);
+  border: 1px solid var(--line);
+}
+
+.verification-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.verification-pass {
+  color: var(--success);
+}
+
+.verification-fail {
+  color: var(--danger);
+}
+
+.verification-log {
+  margin: 10px 0 0;
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(23, 21, 17, 0.06);
+  overflow-x: auto;
+  white-space: pre-wrap;
+}
+
 @media (max-width: 960px) {
   .shell {
     width: min(100vw - 24px, 1200px);
