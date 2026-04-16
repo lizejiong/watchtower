@@ -5,6 +5,7 @@
   "dependencies": {
     "@watchtower/contracts": "workspace:*",
     "@watchtower/core": "workspace:*",
+    "@watchtower/db": "workspace:*",
     "@watchtower/integrations": "workspace:*",
     "bullmq": "^5.58.5"
   },

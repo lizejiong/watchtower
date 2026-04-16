@@ -36,6 +36,7 @@ export interface IssueStore {
   list(): IssueRecord[] | Promise<IssueRecord[]>
   upsert(input: IssueRecord): IssueRecord | Promise<IssueRecord>
   updateStatus(id: string, status: IssueStatus): IssueRecord | Promise<IssueRecord>
+  findByExternalIssueId?(repositoryId: string, externalIssueId: string): IssueRecord | Promise<IssueRecord | undefined> | undefined
   findOpenPrByExternalIssueId?(repositoryId: string, externalIssueId: string): boolean | Promise<boolean>
 }
 
@@ -108,6 +109,14 @@ export async function syncIssueJob(
 
   if (!repository) {
     throw new Error('No repository configured for Sentry issue')
+  }
+
+  const existingIssue = deps.issueStore.findByExternalIssueId
+    ? await deps.issueStore.findByExternalIssueId(repository.id, payload.data.issue.id)
+    : undefined
+
+  if (existingIssue) {
+    return existingIssue
   }
 
   const issue = await deps.issueStore.upsert({

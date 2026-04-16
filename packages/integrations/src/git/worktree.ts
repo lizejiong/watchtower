@@ -1,5 +1,8 @@
 import { ensureRepositoryClean, getCurrentBranch } from './local-repo.js'
 import { execFile } from 'node:child_process'
+import { mkdir, mkdtemp, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { promisify } from 'node:util'
 
 const execFileAsync = promisify(execFile)
@@ -39,5 +42,44 @@ export async function preparePatchBranch(input: {
 
   return {
     branchName: input.branchName,
+  }
+}
+
+export async function createPatchWorktree(input: {
+  repoPath: string
+  branchName: string
+  baseBranch: string
+  rootDir?: string
+}) {
+  await ensureRepositoryClean(input.repoPath)
+
+  const worktreeRoot = input.rootDir ?? process.env.WATCHTOWER_WORKTREE_ROOT ?? join(tmpdir(), 'watchtower-worktrees')
+  await mkdir(worktreeRoot, { recursive: true })
+  const worktreePath = await mkdtemp(join(worktreeRoot, 'issue-'))
+
+  await runGit(input.repoPath, ['worktree', 'add', '--detach', worktreePath, input.baseBranch])
+
+  try {
+    await runGit(worktreePath, ['switch', '-C', input.branchName])
+  } catch (error) {
+    await runGit(input.repoPath, ['worktree', 'remove', '--force', worktreePath])
+    await rm(worktreePath, { recursive: true, force: true })
+    throw error
+  }
+
+  let cleanedUp = false
+
+  return {
+    branchName: input.branchName,
+    worktreePath,
+    async cleanup() {
+      if (cleanedUp) {
+        return
+      }
+
+      cleanedUp = true
+      await runGit(input.repoPath, ['worktree', 'remove', '--force', worktreePath])
+      await rm(worktreePath, { recursive: true, force: true })
+    },
   }
 }

@@ -6,7 +6,7 @@ export const queueNames = {
   prOpen: 'pr-open',
 } as const
 
-function createRedisConnection(redisUrl = process.env.REDIS_URL ?? 'redis://127.0.0.1:6379') {
+export function createRedisConnection(redisUrl = process.env.REDIS_URL ?? 'redis://127.0.0.1:6379') {
   const url = new URL(redisUrl)
 
   return {

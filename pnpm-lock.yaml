@@ -35,6 +35,9 @@ importers:
       '@watchtower/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@watchtower/db':
+        specifier: workspace:*
+        version: link:../../packages/db
       fastify:
         specifier: ^5.6.1
         version: 5.8.5
@@ -65,6 +68,9 @@ importers:
       '@watchtower/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@watchtower/db':
+        specifier: workspace:*
+        version: link:../../packages/db
       '@watchtower/integrations':
         specifier: workspace:*
         version: link:../../packages/integrations
@@ -95,6 +101,9 @@ importers:
       '@watchtower/contracts':
         specifier: workspace:*
         version: link:../contracts
+      '@watchtower/core':
+        specifier: workspace:*
+        version: link:../core
     devDependencies:
       prisma:
         specifier: ^6.7.0

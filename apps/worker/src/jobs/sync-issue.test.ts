@@ -96,4 +96,45 @@ describe('syncIssueJob', () => {
     expect(result.status).toBe('auto_skipped')
     expect(analysisQueue.add).not.toHaveBeenCalled()
   })
+
+  it('does not re-queue an issue that already exists in storage', async () => {
+    const existingIssue: IssueRecord = {
+      id: 'repo-ai-code:123',
+      repositoryId: 'repo-ai-code',
+      externalIssueId: '123',
+      title: 'Chat route crash',
+      culprit: 'app/api/chat/route.ts',
+      level: 'error',
+      status: 'queued',
+    }
+    const issues = new Map<string, IssueRecord>([[existingIssue.id, existingIssue]])
+    const analysisQueue = {
+      add: vi.fn(async () => undefined),
+    }
+
+    const result = await syncIssueJob(createPayload(), {
+      repositoryStore: {
+        list: () => [createRepository()],
+      },
+      issueStore: {
+        list: () => Array.from(issues.values()),
+        findByExternalIssueId: () => existingIssue,
+        upsert: (input) => {
+          issues.set(input.id, input)
+          return input
+        },
+        updateStatus: (id, status) => {
+          const current = issues.get(id)!
+          const updated = { ...current, status }
+          issues.set(id, updated)
+          return updated
+        },
+        findOpenPrByExternalIssueId: () => false,
+      },
+      analysisQueue,
+    })
+
+    expect(result).toEqual(existingIssue)
+    expect(analysisQueue.add).not.toHaveBeenCalled()
+  })
 })

@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "dependencies": {
+    "@watchtower/db": "workspace:*",
     "@watchtower/contracts": "workspace:*",
     "@watchtower/core": "workspace:*",
     "fastify": "^5.6.1",

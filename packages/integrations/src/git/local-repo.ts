@@ -50,3 +50,17 @@ export async function applyPatch(repoPath: string, diff: string) {
     child.stdin.end()
   })
 }
+
+export async function commitAndPushBranch(input: {
+  repoPath: string
+  branchName: string
+  commitMessage: string
+}) {
+  await runGit(input.repoPath, ['add', '--all'])
+  await runGit(input.repoPath, ['commit', '-m', input.commitMessage])
+  await runGit(input.repoPath, ['push', '-u', 'origin', input.branchName])
+}
+
+export async function discardLocalChanges(repoPath: string) {
+  await runGit(repoPath, ['reset', '--hard', 'HEAD'])
+}
