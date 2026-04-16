@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "dependencies": {
+    "@watchtower/contracts": "workspace:*",
     "@watchtower/core": "workspace:*",
     "@watchtower/integrations": "workspace:*",
     "bullmq": "^5.58.5"

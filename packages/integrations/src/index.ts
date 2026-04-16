@@ -1,3 +1,5 @@
+export * from './github/client.js'
+export * from './github/open-draft-pr.js'
 export * from './git/local-repo.js'
 export * from './git/worktree.js'
 export * from './openai/analyze-issue.js'

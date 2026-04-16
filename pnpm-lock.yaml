@@ -59,6 +59,9 @@ importers:
 
   apps/worker:
     dependencies:
+      '@watchtower/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
       '@watchtower/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -99,6 +102,9 @@ importers:
 
   packages/integrations:
     dependencies:
+      '@watchtower/contracts':
+        specifier: workspace:*
+        version: link:../contracts
       '@watchtower/core':
         specifier: workspace:*
         version: link:../core

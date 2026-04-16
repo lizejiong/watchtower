@@ -1,11 +1,5 @@
+import type { VerificationRecord } from '@watchtower/contracts'
 import { spawn } from 'node:child_process'
-
-export interface VerificationRecord {
-  command: string
-  exitCode: number
-  stdout: string
-  stderr: string
-}
 
 export function pickVerificationCommands(input: {
   verificationCmds: string[]
