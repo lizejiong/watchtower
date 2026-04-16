@@ -56,7 +56,7 @@ export default async function HomePage() {
             <div className="kv-list">
               <div className="kv-item">
                 <span className="kv-label">Primary Loop</span>
-                <strong>Sentry {'->'} Watchtower {'->'} AI patch {'->'} lint/build {'->'} GitHub draft PR</strong>
+                <strong>Sentry {'->'} Watchtower poller {'->'} AI patch {'->'} lint/build {'->'} GitHub draft PR</strong>
               </div>
               <div className="kv-item">
                 <span className="kv-label">Auto Skipped</span>
@@ -65,7 +65,7 @@ export default async function HomePage() {
               <div className="kv-item">
                 <span className="kv-label">Next Step</span>
                 <strong>
-                  <Link href="/repositories">Register ai-code and verify the end-to-end webhook flow.</Link>
+                  <Link href="/repositories">Register ai-code and verify the end-to-end polling flow.</Link>
                 </strong>
               </div>
             </div>

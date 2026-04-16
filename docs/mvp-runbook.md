@@ -4,9 +4,9 @@ This runbook describes how to start the local Watchtower MVP and how to validate
 
 ## Scope
 
-The MVP flow is:
+The local MVP flow is:
 
-`Sentry error -> Watchtower syncs the issue -> auto-repair policy check -> AI analysis -> lint/build gate -> GitHub draft PR`
+`ai-code -> Sentry cloud -> Watchtower poller -> auto-repair policy check -> AI analysis -> lint/build gate -> GitHub draft PR`
 
 The first target repository is:
 
@@ -17,6 +17,7 @@ The first target repository is:
 - Node.js 20+
 - pnpm 10+
 - `watchtower` workspace dependencies installed
+- local git credentials configured for commit/push
 - `ai-code` repository available at the configured local path
 
 Optional for the full local stack:
@@ -34,10 +35,18 @@ DATABASE_URL=postgresql://postgres:postgres@localhost:5432/watchtower
 REDIS_URL=redis://localhost:6379
 OPENAI_API_KEY=
 GITHUB_TOKEN=
-SENTRY_WEBHOOK_SECRET=
+SENTRY_AUTH_TOKEN=
+SENTRY_BASE_URL=https://sentry.io
+SENTRY_POLL_INTERVAL_MS=60000
+WATCHTOWER_WORKTREE_ROOT=
 WATCHTOWER_API_BASE_URL=http://localhost:4000
 AI_CODE_PATH=C:\Users\48150\Desktop\mycode\ai-code
 ```
+
+Notes:
+
+- `AI_CODE_PATH` is the base clone for the target repository.
+- `WATCHTOWER_WORKTREE_ROOT` is optional. When set, Watchtower creates temporary git worktrees there during patch execution.
 
 ## Fast Verification
 
@@ -51,7 +60,7 @@ What it does:
 
 - boots the Fastify API in-process
 - registers the `ai-code` repository
-- injects a Sentry webhook payload
+- injects a Sentry issue payload
 - verifies that the issue moves into `queued`
 - runs the worker analysis job with fixtures
 - runs the verification gate with fixture command results
@@ -64,10 +73,11 @@ This path does not require:
 - a live Sentry project
 - a real OpenAI API key
 - a real GitHub token
+- a real Sentry API token
 
 ## Full Local Stack
 
-Use this mode when you want to inspect the dashboard and exercise the real API endpoints manually.
+Use this mode when you want to inspect the dashboard and let the worker poll real Sentry issues.
 
 ### 1. Start infrastructure
 
@@ -86,6 +96,9 @@ pnpm dev:api
 pnpm dev:worker
 pnpm dev:dashboard
 ```
+
+The worker now polls Sentry on the interval configured by `SENTRY_POLL_INTERVAL_MS`.
+Patch application, verification, and git push now run inside temporary worktrees instead of mutating `AI_CODE_PATH` directly.
 
 ### 3. Register the target repository
 
@@ -111,24 +124,15 @@ Check:
 - repository page loads
 - issue detail pages render when issue ids exist
 
-### 5. Trigger or simulate an error
+### 5. Trigger a real Sentry error
 
-Options:
+Cause a real error in `ai-code` that reaches Sentry, then wait for the worker interval to pick it up.
 
-- trigger a real `ai-code` Sentry issue
-- post a fixture payload to `POST /webhooks/sentry`
+Recommended check:
 
-Example:
-
-```bash
-curl -X POST http://localhost:4000/webhooks/sentry ^
-  -H "Content-Type: application/json" ^
-  -d "{\"action\":\"triggered\",\"data\":{\"issue\":{\"id\":\"issue-123\",\"title\":\"Chat route crashes on missing thread_id\",\"culprit\":\"app/api/chat/route.ts\",\"level\":\"error\",\"projectSlug\":\"ai-code-web\"}}}"
-```
-
-Expected result:
-
-- `202 Accepted`
+- verify the issue appears in Sentry first
+- wait up to one poll interval
+- refresh `http://localhost:3000`
 
 ### 6. Observe status progression
 
@@ -142,6 +146,8 @@ Expected issue states in the happy path:
 Expected side path:
 
 - `auto_skipped`
+
+If you still want a manual fallback during development, `POST /webhooks/sentry` remains available for fixture-style payload injection.
 
 ## Verification Commands
 
@@ -158,5 +164,7 @@ pnpm smoke
 
 - `ai-code` uses `pnpm lint` and `pnpm build` as the MVP verification gate. It does not yet have a real automated test suite.
 - The current fixture smoke flow does not call live OpenAI or GitHub APIs.
+- The current runtime now polls Sentry directly and consumes the `issue-analysis` queue using temporary worktrees.
+- Branch naming is still deterministic. Retrying the same issue after a successful push may need an explicit branch replacement policy if you want automatic re-open flows.
 - The local machine may still show non-blocking `baseline-browser-mapping` warnings during Next.js builds.
 - `ai-code` with Sentry on Next.js 16 + Turbopack may still show non-blocking `import-in-the-middle` version warnings in some environments.
