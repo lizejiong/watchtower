@@ -1,0 +1,56 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Repository {
+  id                String   @id @default(cuid())
+  name              String
+  localPath         String
+  remoteUrl         String
+  defaultBranch     String
+  provider          String
+  sentryOrgSlug     String
+  sentryProjectSlug String
+  autoRepairEnabled Boolean  @default(false)
+  autoRepairRules   Json?
+  verificationCmds  Json
+  issues            Issue[]
+}
+
+model Issue {
+  id              String        @id @default(cuid())
+  repositoryId    String
+  externalIssueId String
+  title           String
+  culprit         String?
+  level           String?
+  status          String
+  fingerprint     String?
+  latestEventId   String?
+  release         String?
+  firstSeenAt     DateTime?
+  lastSeenAt      DateTime?
+  repository      Repository    @relation(fields: [repositoryId], references: [id])
+  analyses        AnalysisRun[]
+
+  @@unique([repositoryId, externalIssueId])
+}
+
+model AnalysisRun {
+  id           String   @id @default(cuid())
+  issueId      String
+  status       String
+  summary      String?
+  rootCause    String?
+  patchBranch  String?
+  prUrl        String?
+  confidence   Float?
+  verification Json?
+  createdAt    DateTime @default(now())
+  issue        Issue    @relation(fields: [issueId], references: [id])
+}
