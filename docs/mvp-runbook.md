@@ -33,7 +33,8 @@ Important values:
 ```bash
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/watchtower
 REDIS_URL=redis://localhost:6379
-OPENAI_API_KEY=
+AI_MODEL=zai/glm-5
+AI_GATEWAY_API_KEY=
 GITHUB_TOKEN=
 SENTRY_AUTH_TOKEN=
 SENTRY_BASE_URL=https://sentry.io
@@ -47,10 +48,13 @@ Notes:
 
 - `AI_CODE_PATH` is the base clone for the target repository.
 - `WATCHTOWER_WORKTREE_ROOT` is optional. When set, Watchtower creates temporary git worktrees there during patch execution.
+- `AI_MODEL` applies to both issue analysis and patch generation in V1.
+- `AI_GATEWAY_API_KEY` authenticates Vercel AI Gateway.
+- Use gateway model strings such as `zai/glm-5` or `openai/gpt-5.4`.
 
 ## Fast Verification
 
-Use the fixture-based smoke script when you want a deterministic local check without calling real OpenAI or GitHub services.
+Use the fixture-based smoke script when you want a deterministic local check without calling live AI Gateway or GitHub services.
 
 ```bash
 pnpm smoke
@@ -71,7 +75,7 @@ This path does not require:
 
 - Docker
 - a live Sentry project
-- a real OpenAI API key
+- a real AI Gateway API key
 - a real GitHub token
 - a real Sentry API token
 

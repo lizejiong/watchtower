@@ -1,8 +1,21 @@
 import { describe, expect, it } from 'vitest'
+import type { AiProviderLike } from '../ai/types.js'
 import { generatePatch } from './generate-patch.js'
 
 describe('generatePatch', () => {
-  it('parses structured patch output from the OpenAI client', async () => {
+  it('parses structured patch output from the AI provider facade', async () => {
+    const provider: AiProviderLike = {
+      provider: 'gateway',
+      model: 'openai/gpt-5.4',
+      generateStructured: async <T>() =>
+        ({
+          summary: 'Guard missing thread_id in chat route',
+          branchName: 'watchtower/issue-1',
+          commitMessage: 'fix: guard missing thread_id in chat route',
+          diff: 'diff --git a/app/api/chat/route.ts b/app/api/chat/route.ts\n',
+        }) as T,
+    }
+
     const result = await generatePatch(
       {
         repository: {
@@ -33,18 +46,7 @@ describe('generatePatch', () => {
           },
         ],
       },
-      {
-        responses: {
-          create: async () => ({
-            output_text: JSON.stringify({
-              summary: 'Guard missing thread_id in chat route',
-              branchName: 'watchtower/issue-1',
-              commitMessage: 'fix: guard missing thread_id in chat route',
-              diff: 'diff --git a/app/api/chat/route.ts b/app/api/chat/route.ts\n',
-            }),
-          }),
-        },
-      },
+      provider,
     )
 
     expect(result.branchName).toBe('watchtower/issue-1')
