@@ -1,2 +1,5 @@
+export * from './git/local-repo.js'
+export * from './git/worktree.js'
 export * from './openai/analyze-issue.js'
 export * from './openai/client.js'
+export * from './openai/generate-patch.js'
